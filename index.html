@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ultimate Controller – Free Gamepad Tester for PS4 &amp; Xbox Controllers</title>
-<meta name="description" content="Free online gamepad tester for PS4 DualShock 4 and Xbox One controllers. Check every button, trigger and stick, spot stick drift, calibrate deadzones and test rumble in your browser.">
+<title>Ultimate Controller – Free Gamepad Tester for PS5, PS4 &amp; Xbox Controllers</title>
+<meta name="description" content="Free online gamepad tester for PS5 DualSense, PS4 DualShock 4, Xbox Series X|S and Xbox One controllers. Check every button, trigger and stick, spot stick drift, calibrate deadzones and test rumble in your browser.">
 <link rel="canonical" href="https://ultimatecontroller.com/">
 <!-- ADSENSE: paste the AdSense <script> tag from your AdSense account on the line below this one -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -138,15 +138,17 @@ textarea{width:100%;min-height:150px;font:12px var(--mono);color:var(--ink);back
     <div>
       <h1>Gamepad Tester</h1>
       <p class="muted" style="font-weight:600">Ultimate Controller — free gamepad tester &amp; fix guides</p>
-      <p class="muted">PS4 DualShock 4 and Xbox One controllers. Buttons, triggers, sticks, rumble.</p>
+      <p class="muted">PS5 DualSense, PS4 DualShock 4, Xbox Series X|S and Xbox One controllers. Buttons, triggers, sticks, rumble.</p>
     </div>
     <div class="controls">
       <span class="pill idle" id="status">Demo signal</span>
       <select id="padSel" aria-label="Controller"></select>
-      <div class="seg" role="group" aria-label="Button labels">
+      <div class="seg" role="group" aria-label="Controller layout">
         <button type="button" id="layAuto" aria-pressed="true">Auto</button>
-        <button type="button" id="layXbox" aria-pressed="false">Xbox</button>
-        <button type="button" id="layPs4" aria-pressed="false">PS4</button>
+        <button type="button" id="layXbox" aria-pressed="false" title="Xbox One">One</button>
+        <button type="button" id="laySeries" aria-pressed="false" title="Xbox Series X|S">Series</button>
+        <button type="button" id="layPs4" aria-pressed="false" title="PlayStation 4 DualShock 4">PS4</button>
+        <button type="button" id="layPs5" aria-pressed="false" title="PlayStation 5 DualSense">PS5</button>
       </div>
     </div>
   </header>
@@ -175,6 +177,11 @@ textarea{width:100%;min-height:150px;font:12px var(--mono);color:var(--ink);back
         <button type="button" id="vibW">Light motor</button>
         <button type="button" id="vibB">Both</button>
       </div>
+      <div class="row" id="trgVibRow" hidden>
+        <button type="button" id="vibTL">Left trigger motor</button>
+        <button type="button" id="vibTR">Right trigger motor</button>
+      </div>
+      <p class="muted" id="modelNote" style="font-size:13px"></p>
     </section>
 
     <section class="card">
@@ -255,7 +262,7 @@ textarea{width:100%;min-height:150px;font:12px var(--mono);color:var(--ink);back
   <div class="card">
     <h2>Common questions</h2>
     <p><b>Is my controller data uploaded?</b> No. Everything runs in your browser. See the <a href="privacy.html">privacy policy</a>.</p>
-    <p><b>Which controllers work?</b> Anything your browser sees as a gamepad. Button labels are tuned for PS4 DualShock 4 and Xbox One pads.</p>
+    <p><b>Which controllers work?</b> Anything your browser sees as a gamepad. It recognises PS5 DualSense, PS4 DualShock 4, Xbox Series X|S and Xbox One controllers and labels their buttons to match.</p>
     <p><b>My stick drifts. What now?</b> Read the <a href="stick-drift.html">stick drift guide</a> for fixes from cleaning to replacement.</p>
     <p><b>Nothing shows up.</b> Try the <a href="controller-not-detected.html">controller not detected guide</a>.</p>
   </div>
@@ -268,8 +275,12 @@ textarea{width:100%;min-height:150px;font:12px var(--mono);color:var(--ink);back
 const $=id=>document.getElementById(id);
 const NAMES={
   xbox:['A','B','X','Y','LB','RB','LT','RT','View','Menu','LS','RS','Up','Down','Left','Right','Xbox','Share'],
-  ps4:['✕','○','□','△','L1','R1','L2','R2','Share','Options','L3','R3','Up','Down','Left','Right','PS','Touchpad']
+  series:['A','B','X','Y','LB','RB','LT','RT','View','Menu','LS','RS','Up','Down','Left','Right','Xbox','Share'],
+  ps4:['✕','○','□','△','L1','R1','L2','R2','Share','Options','L3','R3','Up','Down','Left','Right','PS','Touchpad'],
+  ps5:['✕','○','□','△','L1','R1','L2','R2','Create','Options','L3','R3','Up','Down','Left','Right','PS','Touchpad','Mute']
 };
+const MODEL={xbox:'Xbox One controller',series:'Xbox Series X|S controller',ps4:'PS4 DualShock 4',ps5:'PS5 DualSense'};
+const isPS=l=>l==='ps4'||l==='ps5';
 const BINS=32;
 const defStick=()=>({cx:0,cy:0,minX:-1,maxX:1,minY:-1,maxY:1,dz:0.08,outer:1,bins:null,jitter:null,circ:null,done:false});
 let cal={L:defStick(),R:defStick()};
@@ -301,7 +312,23 @@ function demoPad(now){
   return {id:'Demo signal',index:-1,mapping:'standard',timestamp:now,
     axes:[Math.cos(t*1.3)*0.86,Math.sin(t*1.3)*0.86,0.07+Math.sin(t*9)*0.01,-0.04+Math.cos(t*7)*0.01],buttons:btn};
 }
-function detect(id){ return /054c|dualshock|dualsense|playstation|wireless controller/i.test(id)?'ps4':'xbox'; }
+function ids(id){
+  // Chrome: "... (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)"  Firefox: "054c-0ce6-..."
+  let m=id.match(/Vendor:\s*([0-9a-f]{4})\s*Product:\s*([0-9a-f]{4})/i)||id.match(/^([0-9a-f]{1,4})-([0-9a-f]{1,4})-/i);
+  return m?{v:m[1].toLowerCase().padStart(4,'0'),p:m[2].toLowerCase().padStart(4,'0')}:{v:'',p:''};
+}
+const PS5_PIDS=['0ce6','0df2'];                      // DualSense, DualSense Edge
+const PS4_PIDS=['05c4','09cc','0ba0'];               // DualShock 4 v1, v2, USB wireless adaptor
+const SERIES_PIDS=['0b12','0b13','0b20','0b21','0b22']; // Xbox Series X|S controller (USB / Bluetooth firmware variants)
+function detect(id){
+  const d=ids(id);
+  if(d.v==='054c'){ if(PS5_PIDS.includes(d.p))return 'ps5'; if(PS4_PIDS.includes(d.p))return 'ps4'; }
+  if(d.v==='045e'&&SERIES_PIDS.includes(d.p))return 'series';
+  if(/dualsense/i.test(id))return 'ps5';
+  if(/054c|dualshock|playstation|wireless controller/i.test(id))return 'ps4';
+  if(/series/i.test(id))return 'series';
+  return 'xbox';
+}
 function syncSelect(list){
   const sig=list.map(p=>p.index+':'+p.id).join('|');
   if(sig===listSig)return; listSig=sig;
@@ -316,7 +343,7 @@ function syncSelect(list){
 /* ---------- diagram ---------- */
 function buildPad(){
   const lay=layout,n=NAMES[lay];
-  const P=lay==='ps4'
+  const P=isPS(lay)
     ?{ls:[225,238],rs:[375,238],dp:[150,150],fc:[450,150],b8:[205,100],b9:[395,100],b16:[300,238],tp:true}
     :{ls:[160,150],rs:[370,238],dp:[232,238],fc:[440,150],b8:[262,150],b9:[338,150],b16:[300,100],tp:false};
   let h='<g class="shell"><rect x="70" y="62" width="460" height="210" rx="95"/><circle cx="135" cy="262" r="72"/><circle cx="465" cy="262" r="72"/></g>';
@@ -324,6 +351,7 @@ function buildPad(){
     +'<rect class="btn" id="b'+i+'" x="'+x+'" y="34" width="110" height="20" rx="8"/><text class="lbl in" x="'+(x+55)+'" y="48">'+n[i]+'</text>';
   h+=sh(105,4,6,'svT6')+sh(385,5,7,'svT7');
   if(P.tp)h+='<rect class="btn" id="b17" x="235" y="85" width="130" height="75" rx="10"/><text class="lbl in" x="300" y="127">Touchpad</text>';
+  if(lay==='ps5')h+='<circle class="btn" id="b18" cx="300" cy="272" r="8"/><text class="lbl" x="300" y="295">Mute</text>';
   const f=P.fc,fo=[[0,32],[32,0],[-32,0],[0,-32]];
   fo.forEach((o,i)=>{h+='<circle class="btn" id="b'+i+'" cx="'+(f[0]+o[0])+'" cy="'+(f[1]+o[1])+'" r="17"/><text class="lbl in" x="'+(f[0]+o[0])+'" y="'+(f[1]+o[1]+4)+'">'+n[i]+'</text>';});
   const d=P.dp;
@@ -333,6 +361,7 @@ function buildPad(){
     +'<rect class="btn" id="b15" x="'+(d[0]+10)+'" y="'+(d[1]-11)+'" width="26" height="22" rx="4"/>';
   const small=(p,i)=>'<rect class="btn" id="b'+i+'" x="'+(p[0]-17)+'" y="'+(p[1]-8)+'" width="34" height="16" rx="8"/><text class="lbl" x="'+p[0]+'" y="'+(p[1]+22)+'">'+n[i]+'</text>';
   h+=small(P.b8,8)+small(P.b9,9);
+  if(lay==='series')h+=small([300,175],17);
   h+='<circle class="btn" id="b16" cx="'+P.b16[0]+'" cy="'+P.b16[1]+'" r="12"/><text class="lbl" x="'+P.b16[0]+'" y="'+(P.b16[1]+26)+'">'+n[16]+'</text>';
   const st=(p,i,gid)=>'<circle class="ring" cx="'+p[0]+'" cy="'+p[1]+'" r="36"/><g id="'+gid+'"><circle class="btn" id="b'+i+'" cx="'+p[0]+'" cy="'+p[1]+'" r="20"/><text class="lbl in" x="'+p[0]+'" y="'+(p[1]+4)+'">'+n[i]+'</text></g>';
   h+=st(P.ls,10,'svL')+st(P.rs,11,'svR');
@@ -353,7 +382,7 @@ function buildRaw(gp){
     s.value=axisMap[k];});
   $('padId').textContent=gp.id+' · mapping: '+(gp.mapping||'none')+' · '+gp.axes.length+' axes, '+gp.buttons.length+' buttons';
 }
-function btnCount(gp){ return Math.min(gp.buttons.length,layout==='ps4'?18:(gp.buttons.length>17?18:17)); }
+function btnCount(gp){ return Math.min(gp.buttons.length,NAMES[layout].length); }
 function applyLayout(gp){
   layout=layoutPref==='auto'?detect(gp.id):layoutPref;
   buildPad(); buildChips(btnCount(gp));
@@ -372,6 +401,9 @@ function onPadChange(gp,demo){
   const vib=!demo&&gp.vibrationActuator&&typeof gp.vibrationActuator.playEffect==='function';
   ['vibS','vibW','vibB'].forEach(id=>$(id).disabled=!vib);
   $('vibNote').textContent=demo?'':(vib?'':'Not exposed by this browser');
+  const eff=vib&&Array.isArray(gp.vibrationActuator.effects)?gp.vibrationActuator.effects:[];
+  $('trgVibRow').hidden=!eff.includes('trigger-rumble');
+  $('modelNote').textContent=demo?'':('Detected: '+MODEL[detect(gp.id)]+'. '+(isPS(layout)&&layout==='ps5'?'Adaptive triggers, haptics and the light bar are not available to web pages, so they cannot be tested here.':(eff.includes('trigger-rumble')?'This browser can drive the trigger motors too.':'')));
 }
 
 /* ---------- calibration maths ---------- */
@@ -618,10 +650,10 @@ function frame(now){
 /* ---------- events ---------- */
 function setLayout(v){
   layoutPref=v;
-  [['layAuto','auto'],['layXbox','xbox'],['layPs4','ps4']].forEach(([id,k])=>$(id).setAttribute('aria-pressed',String(k===v)));
+  [['layAuto','auto'],['layXbox','xbox'],['laySeries','series'],['layPs4','ps4'],['layPs5','ps5']].forEach(([id,k])=>$(id).setAttribute('aria-pressed',String(k===v)));
   if(curPad)applyLayout(curPad);
 }
-$('layAuto').onclick=()=>setLayout('auto'); $('layXbox').onclick=()=>setLayout('xbox'); $('layPs4').onclick=()=>setLayout('ps4');
+$('layAuto').onclick=()=>setLayout('auto'); $('layXbox').onclick=()=>setLayout('xbox'); $('laySeries').onclick=()=>setLayout('series'); $('layPs4').onclick=()=>setLayout('ps4'); $('layPs5').onclick=()=>setLayout('ps5');
 $('padSel').onchange=e=>{selIndex=+e.target.value;};
 $('resetTested').onclick=()=>{tested=new Set();document.querySelectorAll('.chip.done').forEach(c=>c.classList.remove('done'));};
 $('calBtn').onclick=()=>{ if(!isDemo)wizStart(); };
@@ -638,12 +670,19 @@ function rumble(s,w){
     .then(()=>{$('vibNote').textContent='';},()=>{$('vibNote').textContent='The controller refused the rumble command';});
 }
 $('vibS').onclick=()=>rumble(1,0); $('vibW').onclick=()=>rumble(0,1); $('vibB').onclick=()=>rumble(1,1);
+function trgRumble(l,r){
+  const a=curPad&&curPad.vibrationActuator;
+  if(!a||!a.playEffect)return;
+  a.playEffect('trigger-rumble',{startDelay:0,duration:600,strongMagnitude:0,weakMagnitude:0,leftTrigger:l,rightTrigger:r})
+    .then(()=>{$('vibNote').textContent='';},()=>{$('vibNote').textContent='The controller refused the trigger rumble command';});
+}
+$('vibTL').onclick=()=>trgRumble(1,0); $('vibTR').onclick=()=>trgRumble(0,1);
 function report(){
   const L=[],n=NAMES[layout],total=$('chips').children.length,miss=[];
   for(let i=0;i<total;i++)if(!tested.has(i))miss.push(n[i]);
   L.push('Gamepad Tester report');
   L.push('Controller: '+(curPad?curPad.id:'none')+(isDemo?' (demo)':''));
-  L.push('Mapping: '+((curPad&&curPad.mapping)||'none')+', labels: '+layout);
+  L.push('Mapping: '+((curPad&&curPad.mapping)||'none')+', layout: '+MODEL[layout]);
   L.push('Buttons tested: '+tested.size+'/'+total+(miss.length?' (not pressed: '+miss.join(', ')+')':''));
   L.push('Peak report rate: '+hzPeak+' Hz');
   for(const k of ['L','R']){
