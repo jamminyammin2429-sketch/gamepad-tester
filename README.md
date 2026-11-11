@@ -11,8 +11,7 @@ ultimatecontroller.com (Cloudflare Registrar, DNS only) → GitHub Pages. Keep t
 
 ### 2. Google AdSense
 1. Sign up at adsense.google.com with your new domain.
-2. AdSense gives you a `<script ...adsbygoogle.js?client=ca-pub-XXXX...>` tag. In every `.html` file, paste it on the line under `<!-- ADSENSE: ... -->`.
-3. Create a file named `ads.txt` in this repo containing the line AdSense shows you (it looks like `google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0`).
+2. Done: the AdSense script (ca-pub-1083294266156352) is in every page and `ads.txt` is in the repo.
 4. In AdSense, turn on **Privacy & messaging → European regulations** message (free consent banner for EU/UK visitors).
 5. Request review. Turn on **Auto ads** once approved.
 
