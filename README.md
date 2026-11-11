@@ -1,19 +1,13 @@
-# Gamepad Tester
+# Ultimate Controller
 
 Free online controller tester for PS4 DualShock 4 and Xbox One pads, plus troubleshooting guides.
 
-Live site: https://jamminyammin2429-sketch.github.io/gamepad-tester/
+Live site: https://ultimatecontroller.com/
 
 ## Steps still to do (need your own accounts)
 
-### 1. Custom domain
-1. Buy a domain (Cloudflare, Porkbun or Namecheap).
-2. Repo **Settings → Pages → Custom domain** → type it → Save.
-3. At your registrar add DNS records:
-   - `A` records for `@`: `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
-   - `CNAME` for `www` → `jamminyammin2429-sketch.github.io`
-4. When the check passes, tick **Enforce HTTPS**.
-5. Find-and-replace `https://jamminyammin2429-sketch.github.io/gamepad-tester/` with `https://yourdomain.com/` in every `.html` file, `sitemap.xml` and `robots.txt`.
+### 1. Custom domain — done
+ultimatecontroller.com (Cloudflare Registrar, DNS only) → GitHub Pages. Keep the `CNAME` file in this repo.
 
 ### 2. Google AdSense
 1. Sign up at adsense.google.com with your new domain.
