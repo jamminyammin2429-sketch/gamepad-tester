@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jamminyammin2429-sketch.github.io/gamepad-tester/sitemap.xml

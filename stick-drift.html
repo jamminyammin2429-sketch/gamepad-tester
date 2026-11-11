@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to Fix Stick Drift on PS4 and Xbox Controllers</title>
+<meta name="description" content="Test for stick drift, then fix it: recalibrate, clean the stick, raise the deadzone, or replace the thumbstick module. Works for DualShock 4 and Xbox One controllers.">
+<link rel="canonical" href="https://jamminyammin2429-sketch.github.io/gamepad-tester/stick-drift.html">
+<!-- ADSENSE: paste the AdSense <script> tag from your AdSense account on the line below this one -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="site-nav" aria-label="Site"><a class="brand" href="index.html">Gamepad&nbsp;Tester</a><div class="links"><a href="index.html">Tester</a><a href="guides.html">Guides</a><a href="parts.html">Parts</a><a href="about.html">About</a></div></nav>
+<article>
+
+<h1>How to fix stick drift</h1>
+<p class="meta">Updated November 11, 2026</p>
+<p class="lede">Stick drift is when the game reads stick movement while you aren't touching the stick. Your character creeps forward or the camera slowly turns.</p>
+
+<h2>1. Confirm it's drift</h2>
+<p>Open the <a href="index.html">gamepad tester</a>, press a button so the browser sees your controller, then let go of both sticks.</p>
+<ul>
+  <li><b>Healthy:</b> both sticks sit close to 0.00 on each axis, usually within ±0.05.</li>
+  <li><b>Mild drift:</b> a resting value around 0.08–0.15, or a value that wanders around.</li>
+  <li><b>Bad drift:</b> above 0.15 at rest, or the dot jumps when you tap the controller.</li>
+</ul>
+<p>Flick the stick and let it snap back a few times. If it settles in a different spot each time, the centering spring or sensor is worn.</p>
+
+<h2>2. Free fixes to try first</h2>
+<h3>Recalibrate</h3>
+<p>Use <b>Connect to calibrate</b> in the tester to measure where your stick really rests. Then put that deadzone into Steam Input or your game's controller settings. Windows also has a calibration screen for some controllers under <code>joy.cpl</code> ("Set up USB game controllers"), but many Xbox and PS4 pads don't offer it there.</p>
+<h3>Clean around the stick</h3>
+<p>Dust and grime inside the stick housing are a common cause.</p>
+<ol>
+  <li>Turn the controller off and unplug it.</li>
+  <li>Blow compressed air into the gap around the base of the stick while rotating it in a full circle.</li>
+  <li>For sticky sticks, put a little 90%+ isopropyl alcohol on a cotton swab, wipe around the base, and rotate the stick to work it in.</li>
+  <li>Let it dry completely (at least 10 minutes) before turning it back on, then retest.</li>
+</ol>
+<h3>Raise the deadzone</h3>
+<p>A deadzone tells the game to ignore small stick movements. Setting it just above your drift hides the problem. See <a href="deadzone-explained.html">deadzones explained</a> for how to pick the number.</p>
+
+<h2>3. Check your warranty</h2>
+<p>Sony and Microsoft controllers come with a limited warranty, and drift is often covered while it's active. Check before you open the controller, since opening it can void it.</p>
+
+<h2>4. Replace the stick module</h2>
+<p>Drift that cleaning doesn't fix is usually a worn sensor inside the stick (most stock pads use potentiometers that wear out). The permanent fix is replacing the thumbstick module. That needs desoldering and soldering on the controller's board. Hall-effect replacement sticks use magnets instead of wiping contacts, so they don't wear out the same way.</p>
+<div class="callout warn">Only open the controller if it's out of warranty and you're comfortable soldering. If not, a repair shop or a new controller is the safer route. See <a href="parts.html">replacement parts</a>.</div>
+
+<p><a class="btn" href="index.html">Open the gamepad tester</a></p>
+
+</article>
+<footer class="site-foot"><span>&copy; 2026 Gamepad Tester</span><span><a href="guides.html">Guides</a> · <a href="parts.html">Parts</a> · <a href="about.html">About &amp; contact</a> · <a href="privacy.html">Privacy policy</a></span></footer>
+</body>
+</html>

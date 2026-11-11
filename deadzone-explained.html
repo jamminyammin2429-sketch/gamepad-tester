@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Controller Deadzones Explained – How to Pick the Right Setting</title>
+<meta name="description" content="What a stick deadzone is, inner versus outer deadzone, and a simple way to find the smallest deadzone that stops drift without making aiming feel sluggish.">
+<link rel="canonical" href="https://jamminyammin2429-sketch.github.io/gamepad-tester/deadzone-explained.html">
+<!-- ADSENSE: paste the AdSense <script> tag from your AdSense account on the line below this one -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="site-nav" aria-label="Site"><a class="brand" href="index.html">Gamepad&nbsp;Tester</a><div class="links"><a href="index.html">Tester</a><a href="guides.html">Guides</a><a href="parts.html">Parts</a><a href="about.html">About</a></div></nav>
+<article>
+
+<h1>Deadzones explained</h1>
+<p class="meta">Updated November 11, 2026</p>
+<p class="lede">A deadzone is the small area around the stick's center where the game ignores movement. It stops drift, but too much makes the stick feel slow to respond.</p>
+
+<h2>Inner and outer deadzone</h2>
+<div class="table-wrap"><table>
+<tr><th>Setting</th><th>What it does</th><th>Too low</th><th>Too high</th></tr>
+<tr><td>Inner deadzone</td><td>Ignores movement near the center</td><td>Drift gets through</td><td>Small aim adjustments get swallowed</td></tr>
+<tr><td>Outer deadzone</td><td>Treats near-full tilt as full tilt</td><td>You can't reach full speed</td><td>The top of the range feels like an on/off switch</td></tr>
+</table></div>
+
+<h2>Find your number</h2>
+<ol>
+  <li>Open the <a href="index.html">tester</a> and let go of the sticks.</li>
+  <li>Note the biggest value each stick shows at rest over a few seconds. Flick it and let it return a few times too.</li>
+  <li>Add a small margin, about 0.02–0.03. That's your inner deadzone. For example, a stick that rests at up to 0.06 needs roughly 0.08–0.09.</li>
+  <li>Use the deadzone slider in the tester to preview it, then enter the same value in your game or Steam Input.</li>
+</ol>
+<p>Games show this in different ways. 0.08 might appear as 8%, or as 8 on a 0–100 slider.</p>
+
+<h2>Radial vs axial</h2>
+<p>A <b>radial</b> deadzone is a circle around the center, which feels natural for aiming. An <b>axial</b> deadzone works on each axis separately, which can make diagonal movement snap toward straight lines. Pick radial if your game offers the choice.</p>
+
+<div class="callout">If you need a deadzone above about 0.15 to stop drift, the stick is probably worn. See the <a href="stick-drift.html">stick drift guide</a>.</div>
+<p><a class="btn" href="index.html">Open the gamepad tester</a></p>
+
+</article>
+<footer class="site-foot"><span>&copy; 2026 Gamepad Tester</span><span><a href="guides.html">Guides</a> · <a href="parts.html">Parts</a> · <a href="about.html">About &amp; contact</a> · <a href="privacy.html">Privacy policy</a></span></footer>
+</body>
+</html>

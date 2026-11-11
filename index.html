@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gamepad Tester</title>
+<title>Gamepad Tester – Test PS4 &amp; Xbox Controllers Online</title>
+<meta name="description" content="Free online gamepad tester for PS4 DualShock 4 and Xbox One controllers. Check every button, trigger and stick, spot stick drift, calibrate deadzones and test rumble in your browser.">
+<link rel="canonical" href="https://jamminyammin2429-sketch.github.io/gamepad-tester/">
+<!-- ADSENSE: paste the AdSense <script> tag from your AdSense account on the line below this one -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -111,9 +114,25 @@ textarea{width:100%;min-height:150px;font:12px var(--mono);color:var(--ink);back
   .tiles{grid-template-columns:1fr 1fr}
   .rawgrid{grid-template-columns:1fr}
 }
+
+.site-nav{max-width:980px;margin:0 auto 12px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between}
+.site-nav .brand{font:700 18px/1 var(--display);letter-spacing:.06em;text-transform:uppercase;color:var(--ink);text-decoration:none}
+.site-nav .links{display:flex;flex-wrap:wrap;gap:4px}
+.site-nav .links a{color:var(--muted);text-decoration:none;font-weight:500;padding:6px 10px;border-radius:8px}
+.site-nav .links a:hover{color:var(--ink);background:var(--panel)}
+.site-nav .links a[aria-current="page"]{color:var(--accent);background:var(--panel)}
+.site-foot{max-width:980px;margin:24px auto 0;padding-top:14px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:8px 16px;justify-content:space-between;font-size:13px;color:var(--muted)}
+.site-foot a{color:var(--muted)}
+.site-foot a:hover{color:var(--accent)}
+.site-info{max-width:980px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.site-info h2{margin-bottom:8px}
+.site-info p,.site-info ol{margin:0 0 10px}
+.site-info a{color:var(--accent)}
+@media (max-width:760px){.site-info{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
+<nav class="site-nav" aria-label="Site"><a class="brand" href="index.html">Gamepad&nbsp;Tester</a><div class="links"><a href="index.html" aria-current="page">Tester</a><a href="guides.html">Guides</a><a href="parts.html">Parts</a><a href="about.html">About</a></div></nav>
 <main>
   <header>
     <div>
@@ -220,6 +239,27 @@ textarea{width:100%;min-height:150px;font:12px var(--mono);color:var(--ink);back
 
   <p class="muted" style="font-size:13px">Calibration here measures your sticks and previews the corrected signal. It is saved in this browser per controller and does not rewrite the controller's firmware. Use the centre, deadzone and range numbers from Copy report in Steam Input or your game's settings.</p>
 </main>
+
+<section class="site-info" aria-label="About this tester">
+  <div class="card">
+    <h2>How to test your controller</h2>
+    <ol>
+      <li>Plug the controller in with a USB data cable, or pair it by Bluetooth.</li>
+      <li>Press any button. Browsers hide controllers until you do.</li>
+      <li>Press every button and pull both triggers until the checklist is all green.</li>
+      <li>Let go of both sticks and watch the readings. If a stick reads well away from 0 at rest, that is stick drift.</li>
+      <li>Hit <b>Connect to calibrate</b> to measure your sticks and get deadzone numbers for your games.</li>
+    </ol>
+  </div>
+  <div class="card">
+    <h2>Common questions</h2>
+    <p><b>Is my controller data uploaded?</b> No. Everything runs in your browser. See the <a href="privacy.html">privacy policy</a>.</p>
+    <p><b>Which controllers work?</b> Anything your browser sees as a gamepad. Button labels are tuned for PS4 DualShock 4 and Xbox One pads.</p>
+    <p><b>My stick drifts. What now?</b> Read the <a href="stick-drift.html">stick drift guide</a> for fixes from cleaning to replacement.</p>
+    <p><b>Nothing shows up.</b> Try the <a href="controller-not-detected.html">controller not detected guide</a>.</p>
+  </div>
+</section>
+<footer class="site-foot"><span>&copy; 2026 Gamepad Tester</span><span><a href="guides.html">Guides</a> · <a href="parts.html">Parts</a> · <a href="about.html">About &amp; contact</a> · <a href="privacy.html">Privacy policy</a></span></footer>
 
 <script>
 (function(){
