@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gamepad Tester</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout idea: a bench instrument. Summary strip on top, then diagram, stick scopes, and raw signal below. */
+:root{
+  --bg:#eef0f4; --panel:#ffffff; --ink:#161a22; --muted:#5b6474; --line:#d5dae3;
+  --shell:#dfe3ea; --accent:#1f5fd6; --accent-ink:#ffffff;
+  --good:#1a8a4f; --warn:#a86200; --bad:#c2332b;
+  --display:"Barlow Condensed","Arial Narrow",sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#11141b; --panel:#1a1f29; --ink:#e8ebf2; --muted:#98a2b5; --line:#2c3443;
+    --shell:#252c3a; --accent:#6aa5ff; --accent-ink:#0b1220;
+    --good:#4cc38a; --warn:#f0b146; --bad:#ff7a70;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#11141b; --panel:#1a1f29; --ink:#e8ebf2; --muted:#98a2b5; --line:#2c3443;
+  --shell:#252c3a; --accent:#6aa5ff; --accent-ink:#0b1220;
+  --good:#4cc38a; --warn:#f0b146; --bad:#ff7a70;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--body);padding:16px}
+main{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+h1{font:700 30px/1 var(--display);letter-spacing:.02em;text-transform:uppercase;margin:0}
+h2{font:600 19px/1.1 var(--display);letter-spacing:.04em;text-transform:uppercase;margin:0;text-wrap:balance}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+header{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,button{font:500 14px var(--body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;min-height:38px}
+select{max-width:100%}
+button{cursor:pointer}
+button:hover:not(:disabled){border-color:var(--accent)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;border-left:1px solid var(--line)}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px}
+.cardhead{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.banner{border-left:4px solid var(--warn);background:var(--panel);border-radius:8px;padding:10px 12px}
+.banner.bad{border-left-color:var(--bad)}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .k{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.tile .v{font:500 20px/1.2 var(--mono);font-variant-numeric:tabular-nums}
+.tile .s{font-size:12px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid currentColor;width:max-content;max-width:100%}
+.pill::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor}
+.pill.good{color:var(--good)} .pill.warn{color:var(--warn)} .pill.bad{color:var(--bad)} .pill.idle{color:var(--muted)}
+.cols{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;align-items:start}
+svg#pad{width:100%;height:auto;display:block}
+#pad .shell{fill:var(--shell)}
+#pad .btn,#pad .trk{fill:var(--panel);stroke:var(--line);stroke-width:1.5}
+#pad .ring{fill:none;stroke:var(--line);stroke-width:2}
+#pad .btn.on{fill:var(--accent);stroke:var(--accent)}
+#pad .trg{fill:var(--accent);opacity:.45}
+#pad .lbl{font:600 11px var(--body);fill:var(--muted);text-anchor:middle;pointer-events:none}
+#pad .lbl.in{fill:var(--ink)}
+#pad .btn.on + .lbl.in{fill:var(--accent-ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 12px var(--mono);padding:4px 8px;border-radius:6px;border:1px dashed var(--line);color:var(--muted)}
+.chip.done{border-style:solid;border-color:var(--good);color:var(--good)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);border-style:solid}
+.scopes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.scope{display:flex;flex-direction:column;gap:8px;min-width:0}
+.scope canvas{width:100%;aspect-ratio:1;display:block;border:1px solid var(--line);border-radius:10px;background:var(--bg)}
+.read{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font:13px var(--mono);font-variant-numeric:tabular-nums}
+.read span:nth-child(odd){color:var(--muted)}
+label.sl{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:13px;color:var(--muted)}
+label.sl input{grid-column:1/-1;width:100%;accent-color:var(--accent)}
+.wiz{border:1px solid var(--accent);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.wiz b{font-weight:600}
+.bar{height:10px;border-radius:5px;background:var(--bg);border:1px solid var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent)}
+.barrow{display:grid;grid-template-columns:70px 1fr 44px;gap:8px;align-items:center;font:13px var(--mono)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.legend .raw{border:2px solid var(--muted)} .legend .out{background:var(--accent)} .legend .dzc{background:var(--warn);opacity:.5}
+details summary{cursor:pointer;font:600 19px/1.1 var(--display);letter-spacing:.04em;text-transform:uppercase}
+.rawgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+.axrow{display:grid;grid-template-columns:52px 1fr 64px;gap:8px;align-items:center;font:13px var(--mono);font-variant-numeric:tabular-nums}
+.axbar{position:relative;height:10px;border-radius:5px;background:var(--bg);border:1px solid var(--line)}
+.axbar i{position:absolute;top:-3px;width:4px;height:14px;border-radius:2px;background:var(--accent);margin-left:-2px}
+.bgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.bcell{font:12px var(--mono);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-variant-numeric:tabular-nums}
+.bcell.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.map{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.map label{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+textarea{width:100%;min-height:150px;font:12px var(--mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px}
+[hidden]{display:none!important}
+@media (max-width:760px){
+  .cols{grid-template-columns:1fr}
+  .tiles{grid-template-columns:1fr 1fr}
+  .rawgrid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Gamepad Tester</h1>
+      <p class="muted">PS4 DualShock 4 and Xbox One controllers. Buttons, triggers, sticks, rumble.</p>
+    </div>
+    <div class="controls">
+      <span class="pill idle" id="status">Demo signal</span>
+      <select id="padSel" aria-label="Controller"></select>
+      <div class="seg" role="group" aria-label="Button labels">
+        <button type="button" id="layAuto" aria-pressed="true">Auto</button>
+        <button type="button" id="layXbox" aria-pressed="false">Xbox</button>
+        <button type="button" id="layPs4" aria-pressed="false">PS4</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="banner bad" id="blocked" hidden></div>
+  <div class="banner" id="hint">No controller detected yet. Plug it in by USB or pair it by Bluetooth, then <b>press any button</b>. Browsers hide controllers until a button is pressed. The readings below are a demo signal until then.</div>
+  <div class="banner" id="nonstd" hidden>This browser reports a non-standard button mapping for this controller, so the diagram may light the wrong buttons. Use Raw signal at the bottom, and set the stick axes there if the sticks look swapped.</div>
+
+  <section class="tiles" aria-label="Summary">
+    <div class="tile"><span class="k">Buttons tested</span><span class="v" id="tTested">0/17</span><span class="s" id="tTestedS">Press each one once</span></div>
+    <div class="tile"><span class="k">Report rate</span><span class="v" id="tHz">0 Hz</span><span class="s" id="tHzS">Move a stick to measure</span></div>
+    <div class="tile"><span class="k">Left stick</span><span class="pill idle" id="tL">Not calibrated</span><span class="s" id="tLS">Run calibration</span></div>
+    <div class="tile"><span class="k">Right stick</span><span class="pill idle" id="tR">Not calibrated</span><span class="s" id="tRS">Run calibration</span></div>
+  </section>
+
+  <div class="cols">
+    <section class="card">
+      <div class="cardhead"><h2>Buttons and triggers</h2><button type="button" id="resetTested">Reset checklist</button></div>
+      <svg id="pad" viewBox="0 0 600 340" role="img" aria-label="Controller diagram"></svg>
+      <div class="barrow"><span id="trgLn">LT</span><div class="bar"><i id="trgL"></i></div><span id="trgLv">0.00</span></div>
+      <div class="barrow"><span id="trgRn">RT</span><div class="bar"><i id="trgR"></i></div><span id="trgRv">0.00</span></div>
+      <div class="chips" id="chips"></div>
+      <div class="cardhead"><h2>Rumble</h2><span class="muted" id="vibNote"></span></div>
+      <div class="row">
+        <button type="button" id="vibS">Heavy motor</button>
+        <button type="button" id="vibW">Light motor</button>
+        <button type="button" id="vibB">Both</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="cardhead"><h2>Sticks</h2>
+        <div class="row">
+          <button type="button" class="primary" id="calBtn">Calibrate sticks</button>
+          <button type="button" id="calReset">Reset</button>
+        </div>
+      </div>
+      <div class="wiz" id="wiz" hidden>
+        <p id="wizTitle"><b></b></p>
+        <p class="muted" id="wizMsg"></p>
+        <div class="barrow"><span id="wizAn">Hold</span><div class="bar"><i id="wizA"></i></div><span id="wizAv"></span></div>
+        <div class="barrow" id="wizBrow"><span>Right</span><div class="bar"><i id="wizB"></i></div><span id="wizBv"></span></div>
+        <div class="row">
+          <button type="button" class="primary" id="wizNext" hidden>Finish</button>
+          <button type="button" id="wizCancel">Cancel</button>
+        </div>
+      </div>
+      <div class="scopes">
+        <div class="scope">
+          <canvas id="cvL" width="300" height="300" aria-label="Left stick position"></canvas>
+          <div class="read" id="rdL"></div>
+          <label class="sl" for="dzL">Deadzone <span class="mono" id="dzLv">0.08</span><input type="range" id="dzL" min="0" max="0.4" step="0.01" value="0.08"></label>
+          <label class="sl" for="ouL">Outer limit <span class="mono" id="ouLv">1.00</span><input type="range" id="ouL" min="0.7" max="1" step="0.01" value="1"></label>
+        </div>
+        <div class="scope">
+          <canvas id="cvR" width="300" height="300" aria-label="Right stick position"></canvas>
+          <div class="read" id="rdR"></div>
+          <label class="sl" for="dzR">Deadzone <span class="mono" id="dzRv">0.08</span><input type="range" id="dzR" min="0" max="0.4" step="0.01" value="0.08"></label>
+          <label class="sl" for="ouR">Outer limit <span class="mono" id="ouRv">1.00</span><input type="range" id="ouR" min="0.7" max="1" step="0.01" value="1"></label>
+        </div>
+      </div>
+      <div class="legend">
+        <span><i class="raw"></i>Raw signal</span>
+        <span><i class="out"></i>After calibration</span>
+        <span><i class="dzc"></i>Deadzone</span>
+        <span>Outline: measured travel</span>
+      </div>
+      <div class="row">
+        <button type="button" id="detBtn">Sticks not moving? Detect axes</button>
+        <button type="button" id="copyBtn">Copy report</button>
+        <span class="muted" id="copyNote"></span>
+      </div>
+      <textarea id="copyOut" hidden readonly aria-label="Report text"></textarea>
+    </section>
+  </div>
+
+  <details class="card" id="rawBox">
+    <summary>Raw signal</summary>
+    <p class="muted" id="padId" style="margin-top:10px"></p>
+    <div class="map">
+      <label for="mLX">Left X <select id="mLX"></select></label>
+      <label for="mLY">Left Y <select id="mLY"></select></label>
+      <label for="mRX">Right X <select id="mRX"></select></label>
+      <label for="mRY">Right Y <select id="mRY"></select></label>
+    </div>
+    <div class="rawgrid">
+      <div id="rawAxes" style="display:flex;flex-direction:column;gap:6px"></div>
+      <div class="bgrid" id="rawBtns"></div>
+    </div>
+  </details>
+
+  <p class="muted" style="font-size:13px">Calibration here measures your sticks and previews the corrected signal. It is saved in this browser per controller and does not rewrite the controller's firmware. Use the centre, deadzone and range numbers from Copy report in Steam Input or your game's settings.</p>
+</main>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const NAMES={
+  xbox:['A','B','X','Y','LB','RB','LT','RT','View','Menu','LS','RS','Up','Down','Left','Right','Xbox','Share'],
+  ps4:['✕','○','□','△','L1','R1','L2','R2','Share','Options','L3','R3','Up','Down','Left','Right','PS','Touchpad']
+};
+const BINS=32;
+const defStick=()=>({cx:0,cy:0,minX:-1,maxX:1,minY:-1,maxY:1,dz:0.08,outer:1,bins:null,jitter:null,circ:null,done:false});
+let cal={L:defStick(),R:defStick()};
+let layoutPref='auto', layout='xbox', selIndex=null, curKey='', curPad=null, isDemo=true;
+let axisMap=[0,1,2,3], axisSign=[1,1,1,1], tested=new Set(), wiz=null, blocked=false;
+let trail={L:[],R:[]}, lastTs=0, hzCount=0, hzT0=0, hzPeak=0, prevB0=false;
+let colors={}, colorsT=0, listSig='';
+
+/* ---------- storage ---------- */
+function load(id){
+  try{const j=JSON.parse(localStorage.getItem('padcal:'+id)||'null');
+    if(j&&j.L&&j.R){cal={L:Object.assign(defStick(),j.L),R:Object.assign(defStick(),j.R)};if(Array.isArray(j.map)&&j.map.length===4)axisMap=j.map;if(Array.isArray(j.sign)&&j.sign.length===4)axisSign=j.sign;return;}
+  }catch(e){}
+  cal={L:defStick(),R:defStick()};
+}
+function save(){ if(isDemo||!curPad)return; try{localStorage.setItem('padcal:'+curPad.id,JSON.stringify({L:cal.L,R:cal.R,map:axisMap,sign:axisSign}));}catch(e){} }
+
+/* ---------- pads ---------- */
+function getPads(){
+  if(!navigator.getGamepads){blockMsg('This browser has no Gamepad API. Try Chrome, Edge, Firefox or Safari.');return [];}
+  try{return Array.from(navigator.getGamepads()).filter(p=>p&&p.connected!==false);}
+  catch(e){blockMsg('This viewer is blocking controller access. Open the page in its own browser tab, or ask Claude for the HTML file and open that.');return [];}
+}
+function blockMsg(t){ if(blocked)return; blocked=true; const b=$('blocked'); b.textContent=t; b.hidden=false; }
+function demoPad(now){
+  const t=now/1000, n=17, hit=Math.floor(t*1.5)%n, btn=[];
+  for(let i=0;i<n;i++)btn.push({pressed:i===hit,value:i===hit?1:0});
+  const tr=Math.max(0,Math.sin(t*1.1)); btn[7]={pressed:tr>0.5,value:tr};
+  return {id:'Demo signal',index:-1,mapping:'standard',timestamp:now,
+    axes:[Math.cos(t*1.3)*0.86,Math.sin(t*1.3)*0.86,0.07+Math.sin(t*9)*0.01,-0.04+Math.cos(t*7)*0.01],buttons:btn};
+}
+function detect(id){ return /054c|dualshock|dualsense|playstation|wireless controller/i.test(id)?'ps4':'xbox'; }
+function syncSelect(list){
+  const sig=list.map(p=>p.index+':'+p.id).join('|');
+  if(sig===listSig)return; listSig=sig;
+  const s=$('padSel'); s.innerHTML='';
+  if(!list.length){const o=document.createElement('option');o.textContent='No controller';s.appendChild(o);s.disabled=true;return;}
+  s.disabled=false;
+  list.forEach(p=>{const o=document.createElement('option');o.value=p.index;o.textContent=(p.index+1)+'. '+p.id.replace(/\s*\(.*\)\s*$/,'').slice(0,40);s.appendChild(o);});
+  if(selIndex===null||!list.some(p=>p.index===selIndex))selIndex=list[0].index;
+  s.value=selIndex;
+}
+
+/* ---------- diagram ---------- */
+function buildPad(){
+  const lay=layout,n=NAMES[lay];
+  const P=lay==='ps4'
+    ?{ls:[225,238],rs:[375,238],dp:[150,150],fc:[450,150],b8:[205,100],b9:[395,100],b16:[300,238],tp:true}
+    :{ls:[160,150],rs:[370,238],dp:[232,238],fc:[440,150],b8:[262,150],b9:[338,150],b16:[300,100],tp:false};
+  let h='<g class="shell"><rect x="70" y="62" width="460" height="210" rx="95"/><circle cx="135" cy="262" r="72"/><circle cx="465" cy="262" r="72"/></g>';
+  const sh=(x,i,ti,tid)=>'<rect class="trk" x="'+x+'" y="6" width="110" height="20" rx="8"/><rect class="trg" id="'+tid+'" x="'+x+'" y="6" width="0" height="20" rx="8"/><text class="lbl in" x="'+(x+55)+'" y="20">'+n[ti]+'</text>'
+    +'<rect class="btn" id="b'+i+'" x="'+x+'" y="34" width="110" height="20" rx="8"/><text class="lbl in" x="'+(x+55)+'" y="48">'+n[i]+'</text>';
+  h+=sh(105,4,6,'svT6')+sh(385,5,7,'svT7');
+  if(P.tp)h+='<rect class="btn" id="b17" x="235" y="85" width="130" height="75" rx="10"/><text class="lbl in" x="300" y="127">Touchpad</text>';
+  const f=P.fc,fo=[[0,32],[32,0],[-32,0],[0,-32]];
+  fo.forEach((o,i)=>{h+='<circle class="btn" id="b'+i+'" cx="'+(f[0]+o[0])+'" cy="'+(f[1]+o[1])+'" r="17"/><text class="lbl in" x="'+(f[0]+o[0])+'" y="'+(f[1]+o[1]+4)+'">'+n[i]+'</text>';});
+  const d=P.dp;
+  h+='<rect class="btn" id="b12" x="'+(d[0]-11)+'" y="'+(d[1]-36)+'" width="22" height="26" rx="4"/>'
+    +'<rect class="btn" id="b13" x="'+(d[0]-11)+'" y="'+(d[1]+10)+'" width="22" height="26" rx="4"/>'
+    +'<rect class="btn" id="b14" x="'+(d[0]-36)+'" y="'+(d[1]-11)+'" width="26" height="22" rx="4"/>'
+    +'<rect class="btn" id="b15" x="'+(d[0]+10)+'" y="'+(d[1]-11)+'" width="26" height="22" rx="4"/>';
+  const small=(p,i)=>'<rect class="btn" id="b'+i+'" x="'+(p[0]-17)+'" y="'+(p[1]-8)+'" width="34" height="16" rx="8"/><text class="lbl" x="'+p[0]+'" y="'+(p[1]+22)+'">'+n[i]+'</text>';
+  h+=small(P.b8,8)+small(P.b9,9);
+  h+='<circle class="btn" id="b16" cx="'+P.b16[0]+'" cy="'+P.b16[1]+'" r="12"/><text class="lbl" x="'+P.b16[0]+'" y="'+(P.b16[1]+26)+'">'+n[16]+'</text>';
+  const st=(p,i,gid)=>'<circle class="ring" cx="'+p[0]+'" cy="'+p[1]+'" r="36"/><g id="'+gid+'"><circle class="btn" id="b'+i+'" cx="'+p[0]+'" cy="'+p[1]+'" r="20"/><text class="lbl in" x="'+p[0]+'" y="'+(p[1]+4)+'">'+n[i]+'</text></g>';
+  h+=st(P.ls,10,'svL')+st(P.rs,11,'svR');
+  $('pad').innerHTML=h;
+  $('trgLn').textContent=n[6]; $('trgRn').textContent=n[7];
+}
+function buildChips(count){
+  const n=NAMES[layout],c=$('chips'); c.innerHTML='';
+  for(let i=0;i<count;i++){const s=document.createElement('span');s.className='chip';s.id='c'+i;s.textContent=n[i]||('B'+i);c.appendChild(s);}
+}
+function buildRaw(gp){
+  const a=$('rawAxes'),b=$('rawBtns'); a.innerHTML=''; b.innerHTML='';
+  gp.axes.forEach((_,i)=>{const r=document.createElement('div');r.className='axrow';r.innerHTML='<span>Axis '+i+'</span><div class="axbar"><i id="ra'+i+'"></i></div><span id="rv'+i+'">0.000</span>';a.appendChild(r);});
+  gp.buttons.forEach((_,i)=>{const r=document.createElement('div');r.className='bcell';r.id='rb'+i;r.textContent='B'+i+' 0.00';b.appendChild(r);});
+  ['mLX','mLY','mRX','mRY'].forEach((id,k)=>{const s=$(id);s.innerHTML='';
+    gp.axes.forEach((_,i)=>{const o=document.createElement('option');o.value=i;o.textContent='Axis '+i;s.appendChild(o);});
+    if(axisMap[k]>=gp.axes.length)axisMap[k]=Math.min(k,gp.axes.length-1);
+    s.value=axisMap[k];});
+  $('padId').textContent=gp.id+' · mapping: '+(gp.mapping||'none')+' · '+gp.axes.length+' axes, '+gp.buttons.length+' buttons';
+}
+function btnCount(gp){ return Math.min(gp.buttons.length,layout==='ps4'?18:(gp.buttons.length>17?18:17)); }
+function applyLayout(gp){
+  layout=layoutPref==='auto'?detect(gp.id):layoutPref;
+  buildPad(); buildChips(btnCount(gp));
+  tested.forEach(i=>{const c=$('c'+i);if(c)c.classList.add('done');});
+}
+function onPadChange(gp,demo){
+  curKey=gp.index+':'+gp.id; isDemo=demo; tested=new Set(); trail={L:[],R:[]}; hzPeak=0; wizStop();
+  axisMap=[0,1,2,3]; axisSign=[1,1,1,1];
+  if(demo)cal={L:defStick(),R:defStick()}; else load(gp.id);
+  applyLayout(gp); buildRaw(gp); syncSliders(); stickTiles();
+  const st=$('status');
+  st.textContent=demo?'Demo signal':'Connected'; st.className='pill '+(demo?'idle':'good');
+  $('hint').hidden=!demo||blocked;
+  $('nonstd').hidden=demo||gp.mapping==='standard';
+  $('calBtn').disabled=demo; $('detBtn').disabled=demo; $('calBtn').textContent=demo?'Connect to calibrate':'Calibrate sticks';
+  const vib=!demo&&gp.vibrationActuator&&typeof gp.vibrationActuator.playEffect==='function';
+  ['vibS','vibW','vibB'].forEach(id=>$(id).disabled=!vib);
+  $('vibNote').textContent=demo?'':(vib?'':'Not exposed by this browser');
+}
+
+/* ---------- calibration maths ---------- */
+function applyCal(s,x,y){
+  let dx=x-s.cx,dy=y-s.cy;
+  dx/=Math.max(0.3,dx<0?s.cx-s.minX:s.maxX-s.cx);
+  dy/=Math.max(0.3,dy<0?s.cy-s.minY:s.maxY-s.cy);
+  const m=Math.hypot(dx,dy);
+  if(m<=s.dz||m===0)return [0,0];
+  const k=Math.min(1,(m-s.dz)/Math.max(0.05,s.outer-s.dz))/m;
+  return [dx*k,dy*k];
+}
+function binOf(dx,dy){ return Math.floor(((Math.atan2(dy,dx)+Math.PI)/(2*Math.PI))*BINS)%BINS; }
+function clamp(v,a,b){ return Math.min(b,Math.max(a,v)); }
+function stickTiles(){
+  [['L','tL','tLS'],['R','tR','tRS']].forEach(([k,p,sub])=>{
+    const s=cal[k],el=$(p);
+    if(!s.done){el.className='pill idle';el.textContent='Not calibrated';$(sub).textContent='Run calibration';return;}
+    const off=Math.hypot(s.cx,s.cy);
+    const cls=off<0.05?'good':off<0.12?'warn':'bad';
+    el.className='pill '+cls; el.textContent=cls==='good'?'Centred':cls==='warn'?'Slight offset':'Drifting';
+    $(sub).textContent='Offset '+(off*100).toFixed(1)+'%'+(s.circ!=null?' · circle error '+s.circ.toFixed(1)+'%':'');
+  });
+}
+function syncSliders(){
+  [['L','dzL','ouL'],['R','dzR','ouR']].forEach(([k,d,o])=>{
+    $(d).value=cal[k].dz; $(d+'v').textContent=(+cal[k].dz).toFixed(2);
+    $(o).value=cal[k].outer; $(o+'v').textContent=(+cal[k].outer).toFixed(2);
+  });
+}
+
+/* ---------- wizard ---------- */
+function wizShow(title,msg){ $('wiz').hidden=false; $('wizTitle').firstChild.textContent=title; $('wizMsg').textContent=msg; }
+function wizStop(){ wiz=null; $('wiz').hidden=true; }
+function wizStart(){
+  wiz={step:'rest',t0:performance.now(),acc:{L:[],R:[]}};
+  wizShow('Step 1 of 2: hands off','Let go of both sticks and leave the controller still for 2 seconds.');
+  $('wizAn').textContent='Hold'; $('wizBrow').hidden=true; $('wizNext').hidden=true; $('wizCancel').textContent='Cancel';
+  $('wizA').style.width='0'; $('wizAv').textContent='';
+}
+const DET=['Push the LEFT stick to the RIGHT and hold it','Pull the LEFT stick DOWN and hold it','Push the RIGHT stick to the RIGHT and hold it','Pull the RIGHT stick DOWN and hold it'];
+function detStart(){
+  if(isDemo||!curPad)return;
+  wiz={step:'det',i:0,base:null,wait:false,cand:-1,t0:0,map:[],sign:[]};
+  wizShow('Detect stick axes: 1 of 4',DET[0]+'. Start with both sticks released.');
+  $('wizAn').textContent='Step'; $('wizBrow').hidden=true; $('wizNext').hidden=true; $('wizCancel').textContent='Cancel';
+  $('wizA').style.width='0'; $('wizAv').textContent='0/4';
+}
+function detTick(now,gp){
+  const a=gp.axes;
+  if(a.length<4){wiz={step:'done'};wizShow('Not enough axes','This browser reports only '+a.length+' axes for this controller, so the sticks cannot be read here. Try Chrome, or connect by USB.');$('wizCancel').textContent='Close';return;}
+  if(!wiz.base)wiz.base=Array.from(a);
+  let best=-1,bd=0;
+  for(let j=0;j<a.length;j++){ if(wiz.map.indexOf(j)>=0)continue; const d=(a[j]||0)-wiz.base[j]; if(Math.abs(d)>Math.abs(bd)){bd=d;best=j;} }
+  if(wiz.wait){ if(Math.abs(bd)<0.25)wiz.wait=false; return; }
+  if(Math.abs(bd)>0.6){
+    if(wiz.cand!==best){wiz.cand=best;wiz.t0=now;}
+    else if(now-wiz.t0>250){
+      wiz.map.push(best); wiz.sign.push(bd>0?1:-1); wiz.i++; wiz.wait=true; wiz.cand=-1;
+      $('wizA').style.width=(wiz.i*25)+'%'; $('wizAv').textContent=wiz.i+'/4';
+      if(wiz.i===4){
+        axisMap=wiz.map; axisSign=wiz.sign; save();
+        ['mLX','mLY','mRX','mRY'].forEach((id,k)=>{$(id).value=axisMap[k];});
+        wiz={step:'done'};
+        wizShow('Stick axes set','Left stick uses axes '+axisMap[0]+' and '+axisMap[1]+', right stick uses axes '+axisMap[2]+' and '+axisMap[3]+'. Move the sticks to check, then run Calibrate sticks.');
+        $('wizCancel').textContent='Close';
+      }else wizShow('Detect stick axes: '+(wiz.i+1)+' of 4','Got it. Release the stick, then: '+DET[wiz.i]+'.');
+    }
+  }else wiz.cand=-1;
+}
+function wizTick(now,raw,b0,gp){
+  if(!wiz)return;
+  if(wiz.step==='det'){detTick(now,gp);return;}
+  if(wiz.step==='rest'){
+    for(const k of ['L','R']){
+      const a=wiz.acc[k]; a.push(raw[k]);
+      if(Math.hypot(raw[k][0]-a[0][0],raw[k][1]-a[0][1])>0.12){
+        wiz.t0=now; wiz.acc={L:[],R:[]}; $('wizMsg').textContent='A stick moved. Let go of both sticks and hold still.'; return;
+      }
+    }
+    const p=clamp((now-wiz.t0)/2000,0,1);
+    $('wizA').style.width=(p*100)+'%'; $('wizAv').textContent=Math.round(p*100)+'%';
+    if(p>=1){
+      const c={},r={};
+      for(const k of ['L','R']){
+        const a=wiz.acc[k],n=a.length;
+        const cx=a.reduce((s,v)=>s+v[0],0)/n, cy=a.reduce((s,v)=>s+v[1],0)/n;
+        const jit=a.reduce((m,v)=>Math.max(m,Math.hypot(v[0]-cx,v[1]-cy)),0);
+        c[k]={cx:cx,cy:cy,jitter:jit};
+        r[k]={minX:cx,maxX:cx,minY:cy,maxY:cy,bins:new Array(BINS).fill(0)};
+      }
+      wiz={step:'roll',t0:now,c:c,r:r};
+      wizShow('Step 2 of 2: roll the sticks','Push each stick to the edge and roll it slowly around the full circle, about 3 turns each. Then tap Finish or press '+NAMES[layout][0]+'.');
+      $('wizAn').textContent='Left'; $('wizBrow').hidden=false; $('wizNext').hidden=false;
+      $('wizA').style.width='0'; $('wizB').style.width='0';
+    }
+  }else if(wiz.step==='roll'){
+    const prog={};
+    for(const k of ['L','R']){
+      const c=wiz.c[k],w=wiz.r[k],x=raw[k][0],y=raw[k][1];
+      w.minX=Math.min(w.minX,x); w.maxX=Math.max(w.maxX,x); w.minY=Math.min(w.minY,y); w.maxY=Math.max(w.maxY,y);
+      const dx=x-c.cx,dy=y-c.cy,m=Math.hypot(dx,dy);
+      if(m>0.5){const b=binOf(dx,dy); if(m>w.bins[b])w.bins[b]=m;}
+      prog[k]=w.bins.filter(v=>v>0).length/BINS;
+    }
+    $('wizA').style.width=(prog.L*100)+'%'; $('wizAv').textContent=Math.round(prog.L*100)+'%';
+    $('wizB').style.width=(prog.R*100)+'%'; $('wizBv').textContent=Math.round(prog.R*100)+'%';
+    if(b0&&!prevB0&&now-wiz.t0>1000)wizFinish();
+  }
+}
+function wizFinish(){
+  if(!wiz||wiz.step!=='roll')return;
+  const notes=[];
+  for(const k of ['L','R']){
+    const c=wiz.c[k],w=wiz.r[k],s=cal[k],name=k==='L'?'Left':'Right';
+    s.cx=c.cx; s.cy=c.cy; s.jitter=c.jitter; s.dz=Math.round(clamp(c.jitter*2+0.03,0.03,0.3)*100)/100; s.outer=1; s.done=true;
+    const f=w.bins.filter(v=>v>0);
+    if(f.length>=20){
+      s.minX=w.minX; s.maxX=w.maxX; s.minY=w.minY; s.maxY=w.maxY; s.bins=w.bins.slice();
+      s.circ=Math.sqrt(f.reduce((a,v)=>a+(v-1)*(v-1),0)/f.length)*100;
+      notes.push(name+': centre offset '+(Math.hypot(s.cx,s.cy)*100).toFixed(1)+'%, deadzone '+s.dz.toFixed(2)+', circle error '+s.circ.toFixed(1)+'%.');
+    }else{
+      s.minX=-1; s.maxX=1; s.minY=-1; s.maxY=1; s.bins=null; s.circ=null;
+      notes.push(name+': centre measured, but the stick was not rolled all the way round, so its range was left at default.');
+    }
+  }
+  save(); syncSliders(); stickTiles();
+  wiz={step:'done'};
+  wizShow('Calibration saved',notes.join(' '));
+  $('wizNext').hidden=true; $('wizBrow').hidden=true; $('wizCancel').textContent='Close';
+  $('wizAn').textContent='Done'; $('wizA').style.width='100%'; $('wizAv').textContent='';
+}
+
+/* ---------- drawing ---------- */
+function readColors(now){
+  if(now-colorsT<700&&colors.ink)return; colorsT=now;
+  const cs=getComputedStyle(document.documentElement);
+  ['ink','muted','line','accent','warn','bg'].forEach(k=>colors[k]=cs.getPropertyValue('--'+k).trim());
+}
+function fitCanvas(cv){
+  const dpr=window.devicePixelRatio||1,w=Math.round(cv.clientWidth*dpr);
+  if(w&&cv.width!==w){cv.width=w;cv.height=w;}
+}
+function drawScope(cv,s,raw,out,tr,liveBins,liveC){
+  fitCanvas(cv);
+  const g=cv.getContext('2d'),W=cv.width,c=W/2,R=W/2-W*0.07,px=W/300;
+  g.clearRect(0,0,W,W);
+  g.lineWidth=1*px; g.strokeStyle=colors.line;
+  g.beginPath(); g.arc(c,c,R,0,7); g.stroke();
+  g.beginPath(); g.arc(c,c,R/2,0,7); g.stroke();
+  g.beginPath(); g.moveTo(c-R,c); g.lineTo(c+R,c); g.moveTo(c,c-R); g.lineTo(c,c+R); g.stroke();
+  const ctr=liveC||s, bins=liveBins||s.bins;
+  // deadzone
+  g.globalAlpha=0.3; g.fillStyle=colors.warn;
+  g.beginPath(); g.arc(c+s.cx*R,c+s.cy*R,Math.max(1,s.dz*R),0,7); g.fill(); g.globalAlpha=1;
+  // measured travel
+  if(bins){
+    g.strokeStyle=colors.accent; g.globalAlpha=0.7; g.lineWidth=1.5*px; g.beginPath(); let started=false;
+    for(let i=0;i<=BINS;i++){
+      const v=bins[i%BINS]; if(!v){started=false;continue;}
+      const a=(i%BINS+0.5)/BINS*2*Math.PI-Math.PI, x=c+(ctr.cx+Math.cos(a)*v)*R, y=c+(ctr.cy+Math.sin(a)*v)*R;
+      if(started)g.lineTo(x,y); else{g.moveTo(x,y);started=true;}
+    }
+    g.stroke(); g.globalAlpha=1;
+  }
+  // trail
+  g.fillStyle=colors.muted;
+  for(let i=0;i<tr.length;i++){g.globalAlpha=(i+1)/tr.length*0.5; g.beginPath(); g.arc(c+tr[i][0]*R,c+tr[i][1]*R,1.6*px,0,7); g.fill();}
+  g.globalAlpha=1;
+  // centre mark
+  g.strokeStyle=colors.ink; g.lineWidth=1*px; const mx=c+s.cx*R,my=c+s.cy*R;
+  g.beginPath(); g.moveTo(mx-4*px,my); g.lineTo(mx+4*px,my); g.moveTo(mx,my-4*px); g.lineTo(mx,my+4*px); g.stroke();
+  // calibrated
+  g.fillStyle=colors.accent; g.beginPath(); g.arc(c+out[0]*R,c+out[1]*R,6*px,0,7); g.fill();
+  // raw
+  g.strokeStyle=colors.muted; g.lineWidth=2*px; g.beginPath(); g.arc(c+raw[0]*R,c+raw[1]*R,8*px,0,7); g.stroke();
+}
+function fmt(v){ return (v<0?'−':'+')+Math.abs(v).toFixed(3); }
+function readout(el,raw,out){
+  const m=Math.hypot(out[0],out[1]); let a=Math.atan2(-out[1],out[0])*180/Math.PI; if(a<0)a+=360;
+  el.innerHTML='<span>Raw</span><span>'+fmt(raw[0])+' '+fmt(raw[1])+'</span><span>Out</span><span>'+fmt(out[0])+' '+fmt(out[1])+'</span><span>Tilt</span><span>'+(m*100).toFixed(0)+'% at '+(m?a.toFixed(0):'–')+'°</span>';
+}
+
+/* ---------- frame ---------- */
+function frame(now){
+  const list=getPads(); syncSelect(list);
+  const real=list.find(p=>p.index===selIndex)||list[0];
+  const gp=real||demoPad(now), demo=!real;
+  if(gp.index+':'+gp.id!==curKey)onPadChange(gp,demo);
+  curPad=gp; readColors(now);
+
+  const ax=i=>{const v=gp.axes[axisMap[i]];return typeof v==='number'&&isFinite(v)?v*axisSign[i]:0;};
+  const raw={L:[ax(0),ax(1)],R:[ax(2),ax(3)]};
+  const out={L:applyCal(cal.L,raw.L[0],raw.L[1]),R:applyCal(cal.R,raw.R[0],raw.R[1])};
+  for(const k of ['L','R']){trail[k].push(raw[k]); if(trail[k].length>50)trail[k].shift();}
+
+  // buttons
+  const n=gp.buttons.length; let b0=false;
+  for(let i=0;i<n;i++){
+    const b=gp.buttons[i], val=typeof b==='object'?b.value:+b, on=(typeof b==='object'&&b.pressed)||val>0.5;
+    if(i===0)b0=on;
+    const e=$('b'+i); if(e)e.classList.toggle('on',on);
+    const ch=$('c'+i);
+    if(ch){ch.classList.toggle('on',on); if(on&&!demo&&!tested.has(i)){tested.add(i);ch.classList.add('done');}}
+    const rb=$('rb'+i); if(rb){rb.classList.toggle('on',on); rb.textContent='B'+i+' '+val.toFixed(2);}
+  }
+  const tv=i=>{const b=gp.buttons[i];return b?(typeof b==='object'?b.value:+b):0;};
+  const tl=tv(6),trv=tv(7);
+  $('trgL').style.width=(tl*100)+'%'; $('trgLv').textContent=tl.toFixed(2);
+  $('trgR').style.width=(trv*100)+'%'; $('trgRv').textContent=trv.toFixed(2);
+  const s6=$('svT6'),s7=$('svT7'); if(s6)s6.setAttribute('width',(110*tl).toFixed(1)); if(s7)s7.setAttribute('width',(110*trv).toFixed(1));
+  const gl=$('svL'),gr=$('svR');
+  if(gl)gl.setAttribute('transform','translate('+(out.L[0]*16).toFixed(1)+','+(out.L[1]*16).toFixed(1)+')');
+  if(gr)gr.setAttribute('transform','translate('+(out.R[0]*16).toFixed(1)+','+(out.R[1]*16).toFixed(1)+')');
+
+  // raw axes
+  for(let i=0;i<gp.axes.length;i++){
+    const m=$('ra'+i); if(!m)break;
+    const v=gp.axes[i]||0; m.style.left=((clamp(v,-1,1)+1)*50)+'%'; $('rv'+i).textContent=fmt(v);
+  }
+
+  // tiles
+  const total=$('chips').children.length;
+  $('tTested').textContent=(demo?0:tested.size)+'/'+total;
+  if(!demo){
+    const miss=[]; for(let i=0;i<total;i++)if(!tested.has(i))miss.push(NAMES[layout][i]);
+    $('tTestedS').textContent=miss.length?('Left: '+miss.slice(0,4).join(', ')+(miss.length>4?' +'+(miss.length-4):'')):'All buttons respond';
+  }else $('tTestedS').textContent='Press each one once';
+  if(gp.timestamp!==lastTs){lastTs=gp.timestamp;hzCount++;}
+  if(now-hzT0>=1000){
+    const hz=demo?0:Math.round(hzCount*1000/(now-hzT0)); hzPeak=Math.max(hzPeak,hz);
+    $('tHz').textContent=hz+' Hz'; $('tHzS').textContent=hzPeak?'Peak '+hzPeak+' Hz (limited by screen refresh)':'Move a stick to measure';
+    hzCount=0; hzT0=now;
+  }
+
+  wizTick(now,raw,b0,gp); prevB0=b0;
+  const live=wiz&&wiz.step==='roll';
+  drawScope($('cvL'),cal.L,raw.L,out.L,trail.L,live?wiz.r.L.bins:null,live?wiz.c.L:null);
+  drawScope($('cvR'),cal.R,raw.R,out.R,trail.R,live?wiz.r.R.bins:null,live?wiz.c.R:null);
+  readout($('rdL'),raw.L,out.L); readout($('rdR'),raw.R,out.R);
+  requestAnimationFrame(frame);
+}
+
+/* ---------- events ---------- */
+function setLayout(v){
+  layoutPref=v;
+  [['layAuto','auto'],['layXbox','xbox'],['layPs4','ps4']].forEach(([id,k])=>$(id).setAttribute('aria-pressed',String(k===v)));
+  if(curPad)applyLayout(curPad);
+}
+$('layAuto').onclick=()=>setLayout('auto'); $('layXbox').onclick=()=>setLayout('xbox'); $('layPs4').onclick=()=>setLayout('ps4');
+$('padSel').onchange=e=>{selIndex=+e.target.value;};
+$('resetTested').onclick=()=>{tested=new Set();document.querySelectorAll('.chip.done').forEach(c=>c.classList.remove('done'));};
+$('calBtn').onclick=()=>{ if(!isDemo)wizStart(); };
+$('detBtn').onclick=detStart; $('wizCancel').onclick=wizStop; $('wizNext').onclick=wizFinish;
+$('calReset').onclick=()=>{cal={L:defStick(),R:defStick()};wizStop();syncSliders();stickTiles();save();};
+[['L','dzL','dz'],['R','dzR','dz'],['L','ouL','outer'],['R','ouR','outer']].forEach(([k,id,f])=>{
+  $(id).oninput=e=>{cal[k][f]=+e.target.value;$(id+'v').textContent=(+e.target.value).toFixed(2);save();};
+});
+['mLX','mLY','mRX','mRY'].forEach((id,k)=>{$(id).onchange=e=>{axisMap[k]=+e.target.value;axisSign[k]=1;save();};});
+function rumble(s,w){
+  const a=curPad&&curPad.vibrationActuator;
+  if(!a||!a.playEffect){$('vibNote').textContent='Not exposed by this browser';return;}
+  a.playEffect('dual-rumble',{startDelay:0,duration:700,strongMagnitude:s,weakMagnitude:w})
+    .then(()=>{$('vibNote').textContent='';},()=>{$('vibNote').textContent='The controller refused the rumble command';});
+}
+$('vibS').onclick=()=>rumble(1,0); $('vibW').onclick=()=>rumble(0,1); $('vibB').onclick=()=>rumble(1,1);
+function report(){
+  const L=[],n=NAMES[layout],total=$('chips').children.length,miss=[];
+  for(let i=0;i<total;i++)if(!tested.has(i))miss.push(n[i]);
+  L.push('Gamepad Tester report');
+  L.push('Controller: '+(curPad?curPad.id:'none')+(isDemo?' (demo)':''));
+  L.push('Mapping: '+((curPad&&curPad.mapping)||'none')+', labels: '+layout);
+  L.push('Buttons tested: '+tested.size+'/'+total+(miss.length?' (not pressed: '+miss.join(', ')+')':''));
+  L.push('Peak report rate: '+hzPeak+' Hz');
+  for(const k of ['L','R']){
+    const s=cal[k];
+    L.push((k==='L'?'Left':'Right')+' stick'+(s.done?'':' (not calibrated)'));
+    L.push('  centre: x '+s.cx.toFixed(4)+', y '+s.cy.toFixed(4)+' (offset '+(Math.hypot(s.cx,s.cy)*100).toFixed(1)+'%)');
+    L.push('  range: x '+s.minX.toFixed(3)+' to '+s.maxX.toFixed(3)+', y '+s.minY.toFixed(3)+' to '+s.maxY.toFixed(3));
+    L.push('  deadzone: '+(+s.dz).toFixed(2)+', outer limit: '+(+s.outer).toFixed(2));
+    if(s.jitter!=null)L.push('  rest jitter: '+(s.jitter*100).toFixed(2)+'%');
+    if(s.circ!=null)L.push('  circle error: '+s.circ.toFixed(1)+'%');
+  }
+  return L.join('\n');
+}
+$('copyBtn').onclick=()=>{
+  const t=report(),fb=()=>{const o=$('copyOut');o.hidden=false;o.value=t;o.focus();o.select();$('copyNote').textContent='Copy it from the box below';};
+  try{navigator.clipboard.writeText(t).then(()=>{$('copyNote').textContent='Copied';},fb);}catch(e){fb();}
+};
+window.addEventListener('gamepadconnected',e=>{selIndex=e.gamepad.index;});
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
